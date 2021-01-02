@@ -10,7 +10,7 @@ But it has some proprietary covers over the OATH (Initiative for Open Authentica
 also see `duo.py -h` or the doc string of [duo.py](blob/main/duo.py)
 
 1. generate a new duo QR code for an android tablet within your institution's device management portal
-2. copy the url of the QR code image   <img src="img/copy_qr_code.png?Raw=True" width=100>. it should look like `https://api-e4c9863e.duosecurity.com/frame/qr?value=c53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ`
+2. copy the url of the QR code image   <img src="img/copy_qr_code.png?raw=True" width=100>. it should look like `https://api-e4c9863e.duosecurity.com/frame/qr?value=c53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ`
 3. `./duo.py new 'https://URL-OF-IMAGE'` to register
 4. push continue in the browser
 5. `./duo.py next` for future authentication
