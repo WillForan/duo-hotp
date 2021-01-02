@@ -2,8 +2,8 @@
 """Duo HOTP
 
 Usage:
-    duo_hotp [-s <secret.json>] new <qr_url>
-    duo_hotp [-s <secret.json>] next
+    duo_hotp new <qr_url> [-s <secret.json>]
+    duo_hotp next [-s <secret.json>]
     duo_hotp -h | --help
 
 Options:
@@ -36,7 +36,7 @@ def find_secret(path=None, must_exist=False):
 
     if not isfile(path) and must_exist:
         print(f"'{path}' does not exist!")
-        raise Exception(f"Cannot find secret json file")
+        raise Exception("Cannot find secret json file")
 
     return path
 
@@ -77,6 +77,8 @@ def activate_device(activation_url):
 
 
 class HOTP:
+    """read and write from json file to generate HMAC-based one time password
+    using pyotp"""
     def __init__(self, path, hotp_secret=None):
         """load for secrete file
         or if given a secret, make the file
@@ -84,7 +86,7 @@ class HOTP:
         self.secret_file = path  # where to save
         self.count = None  # number of hits on this secret
         self.hotp_secret = None  # like "7e1c0372fec015ac976765ef4bb5c3f3"
-        self.hotp = None  # pyotp
+        self.pyhotp = None  # pyotp
 
         # if we are initializing with a secret
         # we should create a new file
@@ -112,7 +114,7 @@ class HOTP:
             json.dump(secrets, f)
 
     def load_secret(self):
-        """sets self.hotp to a pyopt.HOTP object using secret.json"""
+        """sets self.pyhotp to a pyotp.HOTP object using secret.json"""
         with open(self.secret_file, "r") as f:
             secret_dict = json.load(f)
 
@@ -123,11 +125,12 @@ class HOTP:
             raise Exception("Bad input")
 
         encoded_secret = b32_encode(self.hotp_secret)
-        self.hotp = pyotp.HOTP(encoded_secret)
-        return self.hotp
+        self.pyhotp = pyotp.HOTP(encoded_secret)
+        return self.pyhotp
 
     def generate(self):
-        passcode = self.hotp.at(self.count)
+        "generate and update counter in secret_file"
+        passcode = self.pyhotp.at(self.count)
         self.count += 1
         self.save_secret()
         return passcode
@@ -154,7 +157,6 @@ if __name__ == "__main__":
         mknew(args["<qr_url>"], secret_file)
 
     elif args["next"]:
-        print(args)
         secret_file = find_secret(args["-s"])
         hotp = HOTP(secret_file)
         print(hotp.generate())
