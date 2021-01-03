@@ -7,7 +7,7 @@ But it has some proprietary covers over the OATH (Initiative for Open Authentica
 `duo.py` is largely copied from there
 
 ## Usage
-also see `duo.py -h` or the doc string of [duo.py](blob/main/duo.py)
+also see `duo.py -h` or the doc string of [duo.py](duo.py)
 
 1. generate a new duo QR code for an android tablet within your institution's device management portal
 2. copy the url of the QR code image   <img src="img/copy_qr_code.png?raw=True" width=100>. it should look like `https://api-e4c9863e.duosecurity.com/frame/qr?value=c53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ`
@@ -22,8 +22,14 @@ duo.py next -s ~/secure/myinstitution_duo.json  | xclip -i
 ```
 
 ## Warnings
- * The default `secret.json` file is not encrypted! Be careful where you store the files.
+ * The default `secret.json` file is not encrypted! Be careful where you store it (see `-s` switch).
  * if you generate too many `next` calls w/out passing on to duo, you'll leave the validation window and duo will not authenticate.
+
+## Tests
+testing is limited.
+```
+python -m doctest duo.py
+```
 
 ## TODO
  * support GPG to secure secret file

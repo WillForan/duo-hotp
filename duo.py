@@ -9,6 +9,9 @@ Usage:
 Options:
     -h --help     Show this screen.
     -s PATH       provide PATH of secret.json file
+
+Large parts of code copied from
+ https://github.com/simonseo/nyuad-spammer/tree/master/spammer/duo
 """
 import base64
 import inspect
@@ -25,10 +28,18 @@ def b32_encode(key):
     return base64.b32encode(key.encode("utf-8"))
 
 
-def find_secret(path=None, must_exist=False):
-    """use input, env, or script directory"""
+def find_secret(path=None, must_exist=True):
+    """use input, env, or script directory
+    >>> os.path.basename(find_secret(must_exist=False)) # default
+    'secrets.json'
+    >>> os.environ["DUO_SECRETFILE"] = "a/b"
+    >>> find_secret(must_exist=False)                   # env
+    'a/b'
+    >>> find_secret("foobar", False)                    # explicit
+    'foobar'
+    """
     if path is None and os.environ.get("DUO_SECRETFILE", None) is not None:
-        path = os.environ("DUO_SECRETFILE")
+        path = os.environ["DUO_SECRETFILE"]
 
     if path is None:
         bin_dir = dirname(abspath(inspect.stack()[0][1]))
@@ -78,7 +89,32 @@ def activate_device(activation_url):
 
 class HOTP:
     """read and write from json file to generate HMAC-based one time password
-    using pyotp"""
+    using pyotp
+
+    >>> if isfile('example.json'): os.unlink('example.json') # cleanup
+
+    HOTP can create and immedately use a secret
+    >>> hotp = HOTP('example.json', "7e1c0372fec015ac976765ef4bb5c3f3")
+    >>> isfile('example.json')
+    True
+    >>> hotp.count
+    0
+    >>> passcode = hotp.generate()
+    >>> hotp.count
+    1
+
+    But wont over write an existing file
+    >>> fail = HOTP('example.json', "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+    Traceback (most recent call last):
+     ...
+    Exception: Not overwritting existing file
+
+    Instead, reload the last settings
+    >>> hotp_again = HOTP('example.json')
+    >>> hotp_again.count
+    1
+    """
+
     def __init__(self, path, hotp_secret=None):
         """load for secrete file
         or if given a secret, make the file
@@ -100,7 +136,7 @@ class HOTP:
         if isfile(self.secret_file):
             print(f"'{self.secret_file}' already exits. not overwriting!")
             print(f"MANUALLY EDIT: counter to 0 and htop to {hotp_secret}")
-            raise Exception("not overwritting existing file")
+            raise Exception("Not overwritting existing file")
         self.hotp_secret = hotp_secret
         self.count = 0
         self.save_secret()
@@ -150,7 +186,7 @@ def mknew(qr_url, secret_file):
 
 
 if __name__ == "__main__":
-    args = docopt(__doc__, version="Duo HOTP 1.0")
+    args = docopt(__doc__, version="Duo HOTP 2021.01")
 
     if args["new"]:
         secret_file = find_secret(args["-s"], must_exist=False)
