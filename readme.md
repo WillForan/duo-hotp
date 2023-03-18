@@ -15,7 +15,7 @@ also see `duo.py -h` or the doc string of [duo.py](duo.py)
 4. push continue in the browser
 5. `./duo.py next` for future authentication
 
-### convenience
+### Convenience
 consider adding binding in `sxkd`, `xbindkeys`, etc for
 ```
 duo.py next -s ~/secure/myinstitution_duo.json  | xclip -i
@@ -24,6 +24,13 @@ duo.py next -s ~/secure/myinstitution_duo.json  | xclip -i
 ## Warnings
  * The default `secret.json` file is not encrypted! Be careful where you store it (see `-s` switch).
  * if you generate too many `next` calls w/out passing on to duo, you'll leave the validation window and duo will not authenticate.
+
+## Install
+
+```
+pip install -r requirements.txt # pyotp docopt requests
+./duo.py -h
+```
 
 ## Tests
 testing is limited.

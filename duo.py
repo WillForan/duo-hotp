@@ -116,7 +116,7 @@ class HOTP:
     """
 
     def __init__(self, path, hotp_secret=None):
-        """load for secrete file
+        """load for secret file
         or if given a secret, make the file
         """
         self.secret_file = path  # where to save
