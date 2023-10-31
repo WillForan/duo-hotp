@@ -19,6 +19,7 @@ import json
 import os
 import pyotp
 import requests
+from Crypto.PublicKey import RSA
 from docopt import docopt
 from os.path import dirname, join, abspath, isfile
 from urllib import parse
@@ -77,7 +78,11 @@ def activate_device(activation_url):
     #     {'response': {'hotp_secret': 'blahblah123', ...}, 'stat': 'OK'}
     # --- Expected Error:
     #     {'code': 40403, 'message': 'Unknown activation code', 'stat': 'FAIL'}
-    response = requests.post(activation_url)
+    params = {"pkpush": "rsa-sha512",
+              "pubkey": RSA.generate(2048).public_key().export_key("PEM").decode(),
+              "manufacturer": "Apple",
+              "model": "iPhone 4S"}
+    response = requests.post(activation_url, params=params)
     response_dict = json.loads(response.text)
     if response_dict["stat"] == "FAIL":
         raise Exception("Activation failed! Try a new QR/Activation URL")
