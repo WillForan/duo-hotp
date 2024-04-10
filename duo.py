@@ -64,7 +64,7 @@ def qr_url_to_activation_url(qr_url):
     # Same as "api-e4c9863e.duosecurity.com"
     host = base64.b64decode(hostb64 + "=" * (-len(hostb64) % 4))
     # this api is not publicly known
-    activation_url = "https://{host}/push/v2/activation/{code}".format(
+    activation_url = "https://{host}/push/v2/activation/{code}?customer_protocol=1".format(
         host=host.decode("utf-8"), code=code
     )
     print(activation_url)
@@ -80,8 +80,21 @@ def activate_device(activation_url):
     #     {'code': 40403, 'message': 'Unknown activation code', 'stat': 'FAIL'}
     params = {"pkpush": "rsa-sha512",
               "pubkey": RSA.generate(2048).public_key().export_key("PEM").decode(),
-              "manufacturer": "Apple",
-              "model": "iPhone 4S"}
+              'jail broken': 'false',
+              'Architecture': 'arm64',
+              'Legion': 'US',
+              'App_id': 'com.duosecurity.duomobile',
+              'full_disk_encryption': 'true',
+              'passcode_status': 'true',
+              'platform': 'Android',
+              'app_version': '3.49.0',
+              'app_build_number': '323001',
+              'version': '11',
+              'manufacturer': 'unknown',
+              'language': 'en',
+              'model': 'Pixel 3a',
+              'security_patch_level': '2021-02-01'
+              }
     response = requests.post(activation_url, params=params)
     response_dict = json.loads(response.text)
     if response_dict["stat"] == "FAIL":
