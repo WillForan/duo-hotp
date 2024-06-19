@@ -71,40 +71,54 @@ def qr_url_to_activation_url(qr_url):
     return activation_url
 
 
-def activate_device(activation_url):
-    """Activates through activation url and returns HOTP key """
-    # --- Get response which will be a JSON of secret keys, customer names, etc
-    # --- Expected Response:
-    #     {'response': {'hotp_secret': 'blahblah123', ...}, 'stat': 'OK'}
-    # --- Expected Error:
-    #     {'code': 40403, 'message': 'Unknown activation code', 'stat': 'FAIL'}
+def activate_params():
+    """
+    Generate paramaters for activiating a device.
 
+    >>> p = activate_params()
+    >>> len(p['pubkey'])
+    450
+    """
     # publickey not public_key in python3-pycryptodomex-3.20.0 (Fedora 40)
-    # see https://github.com/WillForan/duo-hotp/issues/3#issuecomment-2176260202
+    # fix from @gsomlo, see
+    #   https://github.com/WillForan/duo-hotp/issues/3#issuecomment-2176260202
     # 'pip install pycryptodome==3.20.0' has both publickey and public_key
     try:
         pubkey = RSA.generate(2048).public_key().export_key("PEM").decode()
     except AttributeError:
         pubkey = RSA.generate(2048).publickey().exportKey("PEM").decode()
 
-    params = {"pkpush": "rsa-sha512",
-              "pubkey": pubkey,
-              'jail broken': 'false',
-              'Architecture': 'arm64',
-              'Legion': 'US',
-              'App_id': 'com.duosecurity.duomobile',
-              'full_disk_encryption': 'true',
-              'passcode_status': 'true',
-              'platform': 'Android',
-              'app_version': '3.49.0',
-              'app_build_number': '323001',
-              'version': '11',
-              'manufacturer': 'unknown',
-              'language': 'en',
-              'model': 'Pixel 3a',
-              'security_patch_level': '2021-02-01'
-              }
-    response = requests.post(activation_url, params=params)
+    params = {
+        "pkpush": "rsa-sha512",
+        "pubkey": pubkey,
+        "jail broken": "false",
+        "Architecture": "arm64",
+        "Legion": "US",
+        "App_id": "com.duosecurity.duomobile",
+        "full_disk_encryption": "true",
+        "passcode_status": "true",
+        "platform": "Android",
+        "app_version": "3.49.0",
+        "app_build_number": "323001",
+        "version": "11",
+        "manufacturer": "unknown",
+        "language": "en",
+        "model": "Pixel 3a",
+        "security_patch_level": "2021-02-01",
+    }
+    return params
+
+
+def activate_device(activation_url):
+    """Activates through activation url and returns HOTP key"""
+    # --- Get response which will be a JSON of secret keys, customer names, etc
+    # --- Expected Response:
+    #     {'response': {'hotp_secret': 'blahblah123', ...}, 'stat': 'OK'}
+    # --- Expected Error:
+    #     {'code': 40403, 'message': 'Unknown activation code', 'stat': 'FAIL'}
+
+    params = activate_params()
+    response = requests.post(activation_url, params=params, timeout=300)
     response_dict = json.loads(response.text)
     if response_dict["stat"] == "FAIL":
         raise Exception("Activation failed! Try a new QR/Activation URL")
