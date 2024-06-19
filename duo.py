@@ -78,8 +78,17 @@ def activate_device(activation_url):
     #     {'response': {'hotp_secret': 'blahblah123', ...}, 'stat': 'OK'}
     # --- Expected Error:
     #     {'code': 40403, 'message': 'Unknown activation code', 'stat': 'FAIL'}
+
+    # publickey not public_key in python3-pycryptodomex-3.20.0 (Fedora 40)
+    # see https://github.com/WillForan/duo-hotp/issues/3#issuecomment-2176260202
+    # 'pip install pycryptodome==3.20.0' has both publickey and public_key
+    try:
+        pubkey = RSA.generate(2048).public_key().export_key("PEM").decode()
+    except AttributeError:
+        pubkey = RSA.generate(2048).publickey().exportKey("PEM").decode()
+
     params = {"pkpush": "rsa-sha512",
-              "pubkey": RSA.generate(2048).public_key().export_key("PEM").decode(),
+              "pubkey": pubkey,
               'jail broken': 'false',
               'Architecture': 'arm64',
               'Legion': 'US',
