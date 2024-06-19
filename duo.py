@@ -17,12 +17,13 @@ import base64
 import inspect
 import json
 import os
+from os.path import abspath, dirname, isfile, join
+from urllib import parse
+
 import pyotp
 import requests
 from Crypto.PublicKey import RSA
 from docopt import docopt
-from os.path import dirname, join, abspath, isfile
-from urllib import parse
 
 
 def b32_encode(key):
@@ -54,7 +55,11 @@ def find_secret(path=None, must_exist=True):
 
 
 def qr_url_to_activation_url(qr_url):
-    "Create request URL"
+    """Create request URL
+    >>> eg_url = 'https://blah.duosecurity.com/frame/qr?value=c53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ'
+    >>> res = qr_url_to_activation_url(eg_url)
+    https://api-e4c9863e.duosecurity.com/push/v2/activation/c53Xoof7cFSOHGxtm69f?customer_protocol=1
+    """
     # get ?value=XXX
     data = parse.unquote(qr_url.split("?value=")[1])
     # first half of value is the activation code
@@ -63,10 +68,9 @@ def qr_url_to_activation_url(qr_url):
     hostb64 = data.split("-")[1]
     # Same as "api-e4c9863e.duosecurity.com"
     host = base64.b64decode(hostb64 + "=" * (-len(hostb64) % 4))
+    host = host.decode("utf-8")
     # this api is not publicly known
-    activation_url = "https://{host}/push/v2/activation/{code}?customer_protocol=1".format(
-        host=host.decode("utf-8"), code=code
-    )
+    activation_url = f"https://{host}/push/v2/activation/{code}?customer_protocol=1"
     print(activation_url)
     return activation_url
 
@@ -199,7 +203,7 @@ class HOTP:
         self.hotp_secret = secret_dict.get("hotp_secret", None)
         if self.count < 0 or self.hotp_secret is None:
             print("Missing values in '{self.secret_file}")
-            raise Exception("Bad input")
+            raise Exception("Bad secret input")
 
         encoded_secret = b32_encode(self.hotp_secret)
         self.pyhotp = pyotp.HOTP(encoded_secret)
@@ -207,6 +211,8 @@ class HOTP:
 
     def generate(self):
         "generate and update counter in secret_file"
+        if self.pyhotp is None or self.count is None:
+            raise Exception("cannot generate without first loading a secret")
         passcode = self.pyhotp.at(self.count)
         self.count += 1
         self.save_secret()

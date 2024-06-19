@@ -1,4 +1,4 @@
-pyotp
 docopt
+pycryptodome >= 3.20.0
+pyotp >= 2.9.0
 requests
-pycryptodome
