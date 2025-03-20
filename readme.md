@@ -42,10 +42,20 @@ python -m doctest duo.py
  * support GPG to secure secret file
 
 ## TOTP
-`duo.py` is specific to duo's HOTP.
-For time based one time passwords (Google Authenticator, Microsoft Authenticator), look at `oath-toolkit`
+`duo.py` is specific to Duo's HOTP.
+For Time based One Time Passwords (in Duo or others like Google Authenticator, Microsoft Authenticator), look at `oath-toolkit` or [`keepassxc`](https://keepassxc.org/).
 
 ```
 KEY=$(zbarimg /path/to/qr-image.png)
 oathtool --totp --base32 $KEY
+```
+
+-----
+
+As noted by [@Kodiologist](https://github.com/WillForan/duo-hotp/issues/3#issuecomment-2740374448) [2025-03-20],
+
+For Duo TOTP authentication, the `secrets.json` created herein does not have the correct secret. You'll want `HOTP Secret (B32): …` and use like
+
+```
+oathtool --base32 --totp $SECRET
 ```
