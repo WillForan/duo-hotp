@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "docopt",
+#     "pycryptodome",
+#     "pyotp",
+#     "requests"
+# ]
+# ///
 """Duo HOTP
 
 Usage:

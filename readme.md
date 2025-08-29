@@ -21,6 +21,11 @@ consider adding binding in `sxkd`, `xbindkeys`, etc for
 duo.py next -s ~/secure/myinstitution_duo.json  | xclip -i
 ```
 
+Or with `uv`
+```
+uv run --script /path/to/duo.py next -s ~/secure/duo.json
+```
+
 ## Warnings
  * The default `secret.json` file is not encrypted! Be careful where you store it (see `-s` switch).
  * if you generate too many `next` calls w/out passing on to duo, you'll leave the validation window and duo will not authenticate.
@@ -31,6 +36,8 @@ duo.py next -s ~/secure/myinstitution_duo.json  | xclip -i
 pip install -r requirements.txt # pyotp docopt requests
 ./duo.py -h
 ```
+
+Alternatively, `uv run --script duo.py` will pull depends if needed.
 
 ## Tests
 testing is limited.
