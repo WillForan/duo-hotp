@@ -1,7 +1,7 @@
 .PHONY: test fmt
 
 test: fmt
-	python -m doctest duo.py
+	uv run python -m doctest duo.py
 
 fmt:
 	black duo.py

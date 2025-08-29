@@ -189,7 +189,7 @@ class HOTP:
         """create file with 0 counter"""
         if isfile(self.secret_file):
             print(f"'{self.secret_file}' already exits. not overwriting!")
-            print(f"MANUALLY EDIT: counter to 0 and htop to {hotp_secret}")
+            print(f"MANUALLY EDIT: counter to 0 and hotp to {hotp_secret}")
             raise Exception("Not overwritting existing file")
         self.hotp_secret = hotp_secret
         self.count = 0
@@ -241,7 +241,7 @@ def mknew(qr_url, secret_file):
     print(hotp.generate())
 
 
-if __name__ == "__main__":
+def cli_hotp():
     args = docopt(__doc__, version="Duo HOTP 2021.01")
 
     if args["new"]:
@@ -252,3 +252,7 @@ if __name__ == "__main__":
         secret_file = find_secret(args["-s"])
         hotp = HOTP(secret_file)
         print(hotp.generate())
+
+
+if __name__ == "__main__":
+    cli_hotp()
