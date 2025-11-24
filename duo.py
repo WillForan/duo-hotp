@@ -23,9 +23,11 @@ Large parts of code copied from
  https://github.com/simonseo/nyuad-spammer/tree/master/spammer/duo
 """
 import base64
+import datetime
 import inspect
 import json
 import os
+import re
 from os.path import abspath, dirname, isfile, join
 from urllib import parse
 
@@ -65,6 +67,9 @@ def find_secret(path=None, must_exist=True):
 
 def qr_url_to_activation_url(qr_url):
     """Create request URL
+    @param qr_url url to QR code or '?value=duo://{code}-{host}' as url within QR code
+    @returns undocumented v2/activation link
+
     >>> eg_url = 'https://blah.duosecurity.com/frame/qr?value=c53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ'
     >>> res = qr_url_to_activation_url(eg_url)
     https://api-e4c9863e.duosecurity.com/push/v2/activation/c53Xoof7cFSOHGxtm69f?customer_protocol=1
@@ -122,7 +127,7 @@ def activate_params():
     return params
 
 
-def activate_device(activation_url):
+def activate_device(activation_url, write_result=True):
     """Activates through activation url and returns HOTP key"""
     # --- Get response which will be a JSON of secret keys, customer names, etc
     # --- Expected Response:
@@ -135,7 +140,14 @@ def activate_device(activation_url):
     response_dict = json.loads(response.text)
     if response_dict["stat"] == "FAIL":
         raise Exception("Activation failed! Try a new QR/Activation URL")
+
     print(response_dict)
+    if write_result:
+        now = datetime.datetime.now().strftime("%s")
+        fname = f'duo_response_{now}.json'
+        print(f"# !! WARNING: backing up to '{fname}' for external use. Remove once setup !!")
+        with open(fname, 'w') as f:
+            f.write(response.text)
 
     hotp_secret = response_dict["response"]["hotp_secret"]
     return hotp_secret
@@ -189,7 +201,7 @@ class HOTP:
         """create file with 0 counter"""
         if isfile(self.secret_file):
             print(f"'{self.secret_file}' already exits. not overwriting!")
-            print(f"MANUALLY EDIT: counter to 0 and hotp to {hotp_secret}")
+            print(f"""MANUALLY EDIT: {{"hotp_secret": "{hotp_secret}", "count": 0}}""")
             raise Exception("Not overwritting existing file")
         self.hotp_secret = hotp_secret
         self.count = 0
@@ -231,9 +243,24 @@ class HOTP:
 def mknew(qr_url, secret_file):
     """load QR code, send activation request, generate first code"""
 
-    activation_url = qr_url_to_activation_url(qr_url)
+    # given link inside QR code (like if read with zbarimg)
+    if re.search(r'/activate/[A-Za-z0-9]+$', qr_url):
+        res = requests.get(qr_url, timeout=100)
+        m = re.search(r'duo&#x3a;&#x2f;&#x2f;([^"]+)', res.text)
+        if not m:
+            raise Exception(f"Could not find duo link in {qr_url}")
+
+        # kludge: reuse code by faking the original link format
+        activation_url = qr_url_to_activation_url(f"discard?value={m.group(1)}")
+
+    # if given url to actual QR image
+    elif re.search(r'value=', qr_url):
+        activation_url = qr_url_to_activation_url(qr_url)
+    else:
+        raise Exception(f"Don't know how to handle url like: {qr_url}")
+
     hotp_secret = activate_device(activation_url)
-    print("HOTP Secret (B32):", b32_encode(hotp_secret))
+    print("OTP Secret (B32):", b32_encode(hotp_secret))
 
     hotp = HOTP(secret_file, hotp_secret)
 
