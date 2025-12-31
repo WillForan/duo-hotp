@@ -70,21 +70,17 @@ def qr_url_to_activation_url(qr_url):
     @param qr_url url to QR code or '?value=duo://{code}-{host}' as url within QR code
     @returns undocumented v2/activation link
 
-    >>> eg_url = 'https://blah.duosecurity.com/frame/qr?value=c53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ'
+    >>> eg_url = 'https://blah.duosecurity.com/frame/qr?value=https%3A%2F%2Fm-xxxxxxxx.duosecurity.com%2Factivate%2Fyyyyyyyyyyyyyyyyyyyy'
     >>> res = qr_url_to_activation_url(eg_url)
-    https://api-e4c9863e.duosecurity.com/push/v2/activation/c53Xoof7cFSOHGxtm69f?customer_protocol=1
+    https://api-xxxxxxxx.duosecurity.com/push/v2/activation/yyyyyyyyyyyyyyyyyyyy?customer_protocol=1
     """
     # get ?value=XXX
     data = parse.unquote(qr_url.split("?value=")[1])
-    # first half of value is the activation code
-    code = data.split("-")[0].replace("duo://", "")
-    # second half of value is the hostname in base64
-    hostb64 = data.split("-")[1]
-    # Same as "api-e4c9863e.duosecurity.com"
-    host = base64.b64decode(hostb64 + "=" * (-len(hostb64) % 4))
-    host = host.decode("utf-8")
+    rematch = re.search(r"https?://m-(?P<host>[^/]+)/activate/(?P<code>[^/]+)", data)
+    if rematch is None:
+        raise RuntimeError("Invalid activation URL: cannot extract host and code")
     # this api is not publicly known
-    activation_url = f"https://{host}/push/v2/activation/{code}?customer_protocol=1"
+    activation_url = f"https://api-{rematch.group('host')}/push/v2/activation/{rematch.group('code')}?customer_protocol=1"
     print(activation_url)
     return activation_url
 
