@@ -65,14 +65,40 @@ def find_secret(path=None, must_exist=True):
     return path
 
 
-def qr_url_to_activation_url(qr_url):
-    """Create request URL
-    @param qr_url url to QR code or '?value=duo://{code}-{host}' as url within QR code
+def activation_url_duo(qr_url):
+    """
+    Create request URL from duo:// QR code imae url.
+    Deprecated 2026-01 (?)
+    @param qr_url contains '?value=duo://{code}-{host}' as url within QR code
+    @returns undocumented v2/activation link
+
+    >>> eg_url = 'https://blah.duosecurity.com/frame/qr?value=duo%3A%2F%2Fc53Xoof7cFSOHGxtm69f-YXBpLWU0Yzk4NjNlLmR1b3NlY3VyaXR5LmNvbQ'
+    >>> activation_url_duo(eg_url)
+    'https://api-e4c9863e.duosecurity.com/push/v2/activation/c53Xoof7cFSOHGxtm69f?customer_protocol=1'
+    """
+    # get ?value=XXX
+    data = parse.unquote(qr_url.split("?value=")[1])
+    # first half of value is the activation code
+    code = data.split("-")[0].replace("duo://", "")
+    # second half of value is the hostname in base64
+    hostb64 = data.split("-")[1]
+    # Same as "api-e4c9863e.duosecurity.com"
+    host = base64.b64decode(hostb64 + "=" * (-len(hostb64) % 4))
+    host = host.decode("utf-8")
+    # this api is not publicly known
+    activation_url = f"https://{host}/push/v2/activation/{code}?customer_protocol=1"
+    return activation_url
+
+
+def activation_url_https(qr_url):
+    """Create request URL from QR image url with https:// (vs duo://)
+    First seen 2026-01 (github.com/SleepyLeslie; PR #5)
+    @param qr_url like ?value=https://m-{host}/activate/{code}
     @returns undocumented v2/activation link
 
     >>> eg_url = 'https://blah.duosecurity.com/frame/qr?value=https%3A%2F%2Fm-xxxxxxxx.duosecurity.com%2Factivate%2Fyyyyyyyyyyyyyyyyyyyy'
-    >>> res = qr_url_to_activation_url(eg_url)
-    https://api-xxxxxxxx.duosecurity.com/push/v2/activation/yyyyyyyyyyyyyyyyyyyy?customer_protocol=1
+    >>> activation_url_https(eg_url)
+    'https://api-xxxxxxxx.duosecurity.com/push/v2/activation/yyyyyyyyyyyyyyyyyyyy?customer_protocol=1'
     """
     # get ?value=XXX
     data = parse.unquote(qr_url.split("?value=")[1])
@@ -81,7 +107,6 @@ def qr_url_to_activation_url(qr_url):
         raise RuntimeError("Invalid activation URL: cannot extract host and code")
     # this api is not publicly known
     activation_url = f"https://api-{rematch.group('host')}/push/v2/activation/{rematch.group('code')}?customer_protocol=1"
-    print(activation_url)
     return activation_url
 
 
@@ -140,9 +165,11 @@ def activate_device(activation_url, write_result=True):
     print(response_dict)
     if write_result:
         now = datetime.datetime.now().strftime("%s")
-        fname = f'duo_response_{now}.json'
-        print(f"# !! WARNING: backing up to '{fname}' for external use. Remove once setup !!")
-        with open(fname, 'w') as f:
+        fname = f"duo_response_{now}.json"
+        print(
+            f"# !! WARNING: backing up to '{fname}' for external use. Remove once setup !!"
+        )
+        with open(fname, "w") as f:
             f.write(response.text)
 
     hotp_secret = response_dict["response"]["hotp_secret"]
@@ -237,24 +264,35 @@ class HOTP:
 
 
 def mknew(qr_url, secret_file):
-    """load QR code, send activation request, generate first code"""
+    """load QR code, send activation request, generate first code."""
 
     # given link inside QR code (like if read with zbarimg)
-    if re.search(r'/activate/[A-Za-z0-9]+$', qr_url):
+    if re.search(r"/activate/[A-Za-z0-9]+$", qr_url):
         res = requests.get(qr_url, timeout=100)
         m = re.search(r'duo&#x3a;&#x2f;&#x2f;([^"]+)', res.text)
         if not m:
-            raise Exception(f"Could not find duo link in {qr_url}")
+            raise Exception(
+                f"Could not find duo link in '{qr_url}'. "
+                + "Expect '/activate/' url to match 'duo&#x3a;&#x2f;&#x2f;'. "
+                + "**Consider providing the url to the QR code instead.**"
+            )
 
         # kludge: reuse code by faking the original link format
-        activation_url = qr_url_to_activation_url(f"discard?value={m.group(1)}")
+        # TODO: does QR containing link still match expected duo://?
+        activation_url = activation_url_duo(f"discard?value={m.group(1)}")
 
     # if given url to actual QR image
-    elif re.search(r'value=', qr_url):
-        activation_url = qr_url_to_activation_url(qr_url)
+    elif re.search(r"value=http", qr_url):
+        activation_url = activation_url_https(qr_url)
+    elif re.search(r"value=duo", qr_url):
+        activation_url = activation_url_duo(qr_url)
     else:
-        raise Exception(f"Don't know how to handle url like: {qr_url}")
+        raise Exception(
+            f"Don't know how to handle url like '{qr_url}'."
+            + "Expecting URL of QR code. Should contain 'value=https' or 'value=duo'."
+        )
 
+    print(activation_url)
     hotp_secret = activate_device(activation_url)
     print("OTP Secret (B32):", b32_encode(hotp_secret))
 
